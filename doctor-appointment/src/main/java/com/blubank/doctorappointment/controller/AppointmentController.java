@@ -1,7 +1,7 @@
 package com.blubank.doctorappointment.controller;
 
-import com.blubank.doctorappointment.exceptions.ExceptionHandling;
 import com.blubank.doctorappointment.entity.Appointment;
+import com.blubank.doctorappointment.exceptions.ExceptionHandling;
 import com.blubank.doctorappointment.service.Impl.AppointmentServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -9,9 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -20,6 +18,10 @@ public class AppointmentController {
 
     @Autowired
     private AppointmentServiceImpl appointmentService;
+
+    public AppointmentController(AppointmentServiceImpl appointmentService) {
+        this.appointmentService = appointmentService;
+    }
 
     @PostMapping("/create")
     public ResponseEntity<?> createAppointments(
@@ -84,6 +86,9 @@ public class AppointmentController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("The appointment is being taken or deleted.");
         }
     }
+
+
+
     @GetMapping("/my-appointments")
     public ResponseEntity<List<Appointment>> getMyAppointments(
             @RequestParam String phoneNumber) {
