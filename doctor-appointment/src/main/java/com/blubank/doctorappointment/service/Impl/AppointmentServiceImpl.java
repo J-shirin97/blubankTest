@@ -1,12 +1,13 @@
 package com.blubank.doctorappointment.service.Impl;
 
-import com.blubank.doctorappointment.Exceptions.ExceptionHandling;
+import com.blubank.doctorappointment.exceptions.ExceptionHandling;
 import com.blubank.doctorappointment.entity.Appointment;
 import com.blubank.doctorappointment.entity.enums.AppointmentStatus;
 import com.blubank.doctorappointment.repository.AppointmentRepository;
 import com.blubank.doctorappointment.service.IAppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -19,14 +20,28 @@ public class AppointmentServiceImpl implements IAppointmentService {
     @Autowired
     private AppointmentRepository appointmentRepository;
 
+    public AppointmentServiceImpl(AppointmentRepository appointmentRepository) {
+        this.appointmentRepository = appointmentRepository;
+    }
+    @Override
     public List<Appointment> getOpenAppointments() {
-        return appointmentRepository.findByStatus(AppointmentStatus.OPEN);
+        List<Appointment> openAppointments = appointmentRepository.findByStatus(AppointmentStatus.OPEN);
+        List<Appointment> takenAppointments = appointmentRepository.findByStatus(AppointmentStatus.TAKEN);
+
+        // Combine both open and taken appointments
+        List<Appointment> allAppointments = new ArrayList<>();
+        allAppointments.addAll(openAppointments);
+        allAppointments.addAll(takenAppointments);
+
+        return allAppointments;
     }
 
+    @Override
     public List<Appointment> getAppointmentsByPhoneNumber(String phoneNumber) {
         return appointmentRepository.findByPatientPhoneNumber(phoneNumber);
     }
 
+    @Override
     public List<Appointment> createAppointments(LocalDateTime startTime, LocalDateTime endTime) {
         if (endTime.isBefore(startTime) || Duration.between(startTime, endTime).toMinutes() < 30) {
             throw new IllegalArgumentException("Invalid appointment time");
@@ -44,6 +59,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
         return appointmentRepository.saveAll(appointments);
     }
 
+    @Override
     public void bookAppointment(Long appointmentId, String patientName, String phoneNumber) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ExceptionHandling.AppointmentNotFoundException("Appointment not found"));
@@ -59,6 +75,7 @@ public class AppointmentServiceImpl implements IAppointmentService {
         appointmentRepository.save(appointment);
     }
 
+    @Override
     public void deleteOpenAppointment(Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ExceptionHandling.AppointmentNotFoundException("Appointment not found"));
@@ -69,4 +86,28 @@ public class AppointmentServiceImpl implements IAppointmentService {
 
         appointmentRepository.delete(appointment);
     }
+
+    @Transactional
+    @Override
+    public void takeAppointment(Long appointmentId, String patientName, String patientPhoneNumber) {
+        // Fetch the appointment with a lock for concurrency management
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        // 1. Check if the appointment is already taken or deleted
+        if (appointment.getStatus() != AppointmentStatus.OPEN) {
+            throw new IllegalArgumentException("Appointment is already taken or deleted.");
+        }
+
+        // 2. Assign patient details and mark the appointment as TAKEN
+        appointment.setPatientName(patientName);
+        appointment.setPatientPhoneNumber(patientPhoneNumber);
+        appointment.setStatus(AppointmentStatus.TAKEN);
+
+        // Save the updated appointment
+        appointmentRepository.save(appointment);
+    }
+
+
+
 }

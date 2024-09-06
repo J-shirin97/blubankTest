@@ -1,4 +1,4 @@
-package com.blubank.doctorappointment.Exceptions;
+package com.blubank.doctorappointment.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -25,5 +25,6 @@ public class ExceptionHandling {
             super(message);
         }
     }
+
 
 }
